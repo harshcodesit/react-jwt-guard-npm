@@ -1,6 +1,6 @@
 {
   "name": "react-jwt-guard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency React utility for safe JWT decoding, real-time expiration monitoring, and declarative component protection.",
   "author": "",
   "license": "MIT",
