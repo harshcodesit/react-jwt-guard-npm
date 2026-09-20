@@ -1,28 +1,26 @@
-# react-jwt-guard 🛡️
+# react-jwt-guard
 
 [![npm version](https://img.shields.io/npm/v/react-jwt-guard.svg?color=blue)](https://www.npmjs.com/package/react-jwt-guard)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/react-jwt-guard?color=brightgreen)](https://bundlephobia.com/package/react-jwt-guard)
 [![license](https://img.shields.io/npm/l/react-jwt-guard.svg)](https://github.com/)
 [![types](https://img.shields.io/badge/types-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 
-A lightweight (< 1KB gzipped), **zero-dependency** React and TypeScript utility for safe JWT decoding, real-time expiration tracking, and declarative component & route guarding in modern web applications.
+A lightweight (< 1KB gzipped), zero-dependency React and TypeScript utility for safe JWT decoding, real-time expiration monitoring, and declarative component protection.
 
 ---
 
-## ⚡ Key Features
+## Features
 
-* 🪶 **Zero Dependencies**: Pure React & TypeScript primitives. No heavy crypto or polyfill bloat.
-* 🔒 **Safe Base64URL Decoding**: Fully compliant with RFC 7519. Handles URL-safe characters (`-`, `_`) and multi-byte Unicode (international text & emojis) without crashing.
-* ⏱️ **Real-Time Expiration Watcher**: Automatically detects token expiration the exact second it occurs and triggers `onExpire` callbacks without requiring a manual page refresh.
-* 🛡️ **Declarative `<JwtGuard>`**: Drop-in wrapper for route protection with support for standard fallback UI and advanced **Render Props**.
-* 🧠 **Strict TypeScript Generics**: Pass your own custom payload interface (`<UserClaims>`) for compile-time type safety and full IDE autocompletion.
-* 📦 **Dual Output**: Native support for ESM (`.mjs`) and CommonJS (`.js`).
+- **Zero Dependencies**: Built entirely with native JavaScript and React primitives.
+- **Safe Base64URL Decoding**: Fully compliant with RFC 7519. Safely normalizes URL-safe characters (`-`, `_`) and handles multi-byte UTF-8 Unicode without throwing runtime errors.
+- **Real-Time Expiration Watcher**: Automatically calculates remaining token lifetime and triggers `onExpire` callbacks the exact second a token lapses.
+- **Declarative Guard Component**: Drop-in `<JwtGuard>` boundary supporting both standard fallback UI and render props.
+- **TypeScript First**: Full generic support (`<T>`) for custom claims, offering autocomplete and static type safety.
+- **Dual Bundle**: Includes ESM (`.mjs`) and CommonJS (`.js`) outputs with auto-generated type declarations (`.d.ts`).
 
 ---
 
-## 📥 Installation
-
-Install via npm, yarn, or pnpm:
+## Installation
 
 ```bash
 npm install react-jwt-guard
@@ -36,30 +34,39 @@ yarn add react-jwt-guard
 pnpm add react-jwt-guard
 ```
 
-> **Note**: `react-jwt-guard` requires `react` and `react-dom` (version `>=16.8.0` including React 18 & React 19) installed as peer dependencies in your project.
+### Peer Dependencies
+
+Ensure `react` and `react-dom` (version `>=16.8.0`) are installed in your project:
+
+```json
+"peerDependencies": {
+  "react": ">=16.8.0 || >=17.0.0 || >=18.0.0 || >=19.0.0",
+  "react-dom": ">=16.8.0 || >=17.0.0 || >=18.0.0 || >=19.0.0"
+}
+```
 
 ---
 
-## 🚀 Quick Start & Usage
+## Quick Start
 
-### 1. Basic Component / Route Guard (`<JwtGuard>`)
+### 1. Route / Component Protection (`<JwtGuard>`)
 
-Protect any component or route by rendering a fallback (e.g. `<Navigate to="/login" />` or a message) when the token is missing, malformed, or expired.
+Render protected sections when authenticated, or show a fallback (redirect or error message) when the token is missing, malformed, or expired.
 
 ```tsx
 import React from 'react';
 import { JwtGuard } from 'react-jwt-guard';
 import { Navigate } from 'react-router-dom';
-import { DashboardView } from './DashboardView';
+import { Dashboard } from './Dashboard';
 
-export function ProtectedDashboard({ token }: { token: string | null }) {
+export function ProtectedRoute({ token }: { token: string | null }) {
   return (
     <JwtGuard
       token={token}
       fallback={<Navigate to="/login" replace />}
-      onExpire={() => alert('Session expired! Please log in again.')}
+      onExpire={() => alert('Session expired. Please log in again.')}
     >
-      <DashboardView />
+      <Dashboard />
     </JwtGuard>
   );
 }
@@ -67,31 +74,31 @@ export function ProtectedDashboard({ token }: { token: string | null }) {
 
 ---
 
-### 2. Advanced: Render Props Pattern
+### 2. Accessing Claims via Render Props
 
-Eliminate redundant hook calls and prop drilling by accessing the decoded payload and live countdown directly inside JSX:
+Pass custom interfaces to `<JwtGuard>` to read user claims and expiration data directly inside JSX without invoking hooks separately:
 
 ```tsx
 import React from 'react';
 import { JwtGuard } from 'react-jwt-guard';
 
-interface UserClaims {
-  id: string;
+interface UserPayload {
+  sub: string;
   email: string;
   role: 'admin' | 'user';
 }
 
-export function AdminArea({ token }: { token: string | null }) {
+export function AccountSection({ token }: { token: string | null }) {
   return (
-    <JwtGuard<UserClaims>
+    <JwtGuard<UserPayload>
       token={token}
-      fallback={<p className="error">Access Denied: Please sign in.</p>}
+      fallback={<p>Please sign in to view account details.</p>}
     >
       {({ payload, timeUntilExpiry }) => (
-        <div className="card">
-          <h2>Welcome, {payload?.email}!</h2>
-          <p>Role: <strong>{payload?.role}</strong></p>
-          <small>Session expires in {timeUntilExpiry} seconds</small>
+        <div>
+          <h2>User: {payload?.email}</h2>
+          <p>Role: {payload?.role}</p>
+          <p>Expires in: {timeUntilExpiry}s</p>
         </div>
       )}
     </JwtGuard>
@@ -101,39 +108,37 @@ export function AdminArea({ token }: { token: string | null }) {
 
 ---
 
-### 3. Standalone `useJwt` Hook
+### 3. Custom Hook Usage (`useJwt`)
 
-Use the `useJwt` hook for custom component state, auto-logout workflows, or token refresh flows:
+For custom state management, auto-logout hooks, or authentication headers:
 
 ```tsx
 import React from 'react';
 import { useJwt } from 'react-jwt-guard';
 
 interface AuthClaims {
-  sub: string;
+  id: string;
   email: string;
-  role: string;
 }
 
-export function ProfileBadge({ token }: { token: string | null }) {
+export function UserBadge({ token }: { token: string | null }) {
   const { payload, isAuthenticated, isExpired, timeUntilExpiry } = useJwt<AuthClaims>(token, {
     onExpire: () => {
-      console.warn('Token expired at:', new Date().toISOString());
-      // Trigger token refresh endpoint or redirect
+      console.warn('Session expired. Initiating refresh token request...');
     }
   });
 
   if (!isAuthenticated) {
-    return <span>Guest User</span>;
+    return <span>Not authenticated</span>;
   }
 
   return (
-    <div className="badge">
-      <span>{payload?.email}</span>
+    <div>
+      <span>Signed in as {payload?.email}</span>
       {isExpired ? (
-        <span className="badge-expired">Expired</span>
+        <span>(Expired)</span>
       ) : (
-        <span className="badge-active">Active ({timeUntilExpiry}s remaining)</span>
+        <span>({timeUntilExpiry}s remaining)</span>
       )}
     </div>
   );
@@ -142,66 +147,74 @@ export function ProfileBadge({ token }: { token: string | null }) {
 
 ---
 
-### 4. Pure Utility: `decodeJwt`
+### 4. Standalone Utilities
 
-Need to decode a token outside React (e.g., in an Axios interceptor or Node.js service)? Use the standalone utility:
+Use `decodeJwt`, `isTokenExpired`, and `getTokenRemainingSeconds` in non-React environments (e.g., Axios interceptors, middleware):
 
 ```ts
-import { decodeJwt, isTokenExpired } from 'react-jwt-guard';
+import { decodeJwt, isTokenExpired, getTokenRemainingSeconds } from 'react-jwt-guard';
 
 const token = 'eyJhbGciOi...';
 
 if (!isTokenExpired(token)) {
-  const payload = decodeJwt<{ email: string }>(token);
-  console.log('User email:', payload?.email);
+  const user = decodeJwt<{ email: string }>(token);
+  const secondsLeft = getTokenRemainingSeconds(token);
+  console.log(`User: ${user?.email}, Time left: ${secondsLeft}s`);
 }
 ```
 
 ---
 
-## 📖 API Reference
+## API Reference
 
 ### `<JwtGuard<T>>` Props
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `token` | `string \| null \| undefined` | `undefined` | The raw JWT string to evaluate. |
-| `children` | `ReactNode \| ((result: UseJwtResult<T>) => ReactNode)` | **Required** | Content rendered if valid & active. Supports render props. |
-| `fallback` | `ReactNode` | `null` | UI displayed if the token is missing, invalid, or expired. |
-| `onExpire` | `() => void` | `undefined` | Callback fired the exact moment the token expires in real time. |
+| `token` | `string \| null \| undefined` | `undefined` | Raw JWT string to validate. |
+| `children` | `ReactNode \| ((result: UseJwtResult<T>) => ReactNode)` | Required | Rendered when token is valid and unexpired. |
+| `fallback` | `ReactNode` | `null` | Rendered when token is missing, invalid, or expired. |
+| `onExpire` | `() => void` | `undefined` | Callback invoked when the token expires in real time. |
 
 ---
 
-### `useJwt<T>(token, options)` Return Object (`UseJwtResult<T>`)
+### `useJwt<T>(token, options)`
+
+#### Parameters
+
+- `token` (`string | null | undefined`): Raw JWT string.
+- `options` (`UseJwtOptions`):
+  - `onExpire` (`() => void`): Callback executed when token expires.
+
+#### Return Value (`UseJwtResult<T>`)
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `payload` | `T \| null` | The parsed JSON payload object (typed with generic `<T>`). |
-| `isAuthenticated` | `boolean` | `true` only if token is valid, present, and **not expired**. |
-| `isExpired` | `boolean` | `true` if current time `>= exp * 1000` or if no `exp` claim exists. |
-| `timeUntilExpiry` | `number \| null` | Seconds remaining until expiration (`null` if no `exp` claim). |
-| `isValid` | `boolean` | `true` if token has a valid 3-part compact JWT format and decodable JSON. |
+| `payload` | `T \| null` | Decoded claims object typed with `<T>`. |
+| `isAuthenticated` | `boolean` | `true` if token is valid, non-empty, and unexpired. |
+| `isExpired` | `boolean` | `true` if current time exceeds token `exp` or `exp` is absent. |
+| `timeUntilExpiry` | `number \| null` | Remaining seconds until expiration (`null` if no `exp`). |
+| `isValid` | `boolean` | `true` if token conforms to standard 3-part JWT structure. |
 
 ---
 
-### Pure Helper Functions
+### Utility Functions
 
-* `decodeJwt<T>(token: string | null | undefined): T | null`
-  * Safely decodes a Base64URL payload into typed JSON. Returns `null` on invalid or malformed tokens.
-* `isTokenExpired(token: string | null | undefined): boolean`
-  * Returns `false` if unexpired; returns `true` if expired, missing, or invalid.
-* `getTokenRemainingSeconds(token: string | null | undefined): number | null`
-  * Returns seconds remaining until token expiration, or `0` if expired, or `null` if invalid.
-
----
-
-## ⚠️ Security Notice
-
-> **Client-Side Decoding vs Backend Verification**:
-> Decoding a JWT in the browser allows your UI to read public claims (such as user email or expiration time) to enhance UX. It **does NOT verify the cryptographic signature** (which requires your backend secret key). Always verify all requests on your backend (e.g., via Express middleware with `jwt.verify`).
+- **`decodeJwt<T>(token: string | null | undefined): T | null`**
+  Decodes Base64URL payload into a typed JSON object without verifying cryptographic signature. Returns `null` if invalid.
+- **`isTokenExpired(token: string | null | undefined): boolean`**
+  Checks whether `exp * 1000` is in the past.
+- **`getTokenRemainingSeconds(token: string | null | undefined): number | null`**
+  Returns seconds remaining until expiration. Returns `0` if expired, or `null` if invalid.
 
 ---
 
-## 📄 License
+## Security Consideration
+
+Client-side JWT decoding is intended exclusively for UI state management (such as displaying user metadata or scheduling re-authentication). It does not verify the cryptographic signature of the token. All authorization decisions and sensitive operations must be verified on the backend using the corresponding secret or public key.
+
+---
+
+## License
 
 MIT © 2026
